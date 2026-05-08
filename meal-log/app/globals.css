@@ -1,0 +1,131 @@
+:root {
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --ink: #111111;
+  --ink-2: #5a5a57;
+  --ink-3: #8a8a86;
+  --line: rgba(0, 0, 0, 0.12);
+  --line-strong: rgba(0, 0, 0, 0.24);
+  --ok: #1d9e75;
+  --warn: #ba7517;
+  --err: #a32d2d;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button { font-family: inherit; }
+
+input, button {
+  font: inherit;
+  color: inherit;
+}
+
+input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 0.5px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus { border-color: var(--line-strong); }
+
+button.primary {
+  width: 100%;
+  padding: 12px;
+  background: var(--ink);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+button.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary:not(:disabled):hover { opacity: 0.85; }
+
+button.ghost {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+button.ghost:hover { color: var(--ink); }
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--surface);
+  position: relative;
+}
+
+.app-header {
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-bottom: 0.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.app-header .title {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.app-content { flex: 1; overflow-y: auto; }
+
+.label-caps {
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.divider {
+  height: 0;
+  border-top: 0.5px solid var(--line);
+  margin: 14px 0;
+}
+
+.mono { font-family: var(--mono); }
