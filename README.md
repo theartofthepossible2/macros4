@@ -1,170 +1,86 @@
-# Meal Log
+# macros4
 
-Photo-based meal logging for fitness coaching clients. Built around a barcode-gated
-camera capture, an OpenAI vision parse, and a no-photos-at-rest data policy.
+A minimal calorie/energy-balance tracker. Rebuild of an iOS app as a Next.js + TypeScript web app backed by Supabase, deployable to Vercel.
 
-## Stack
+Four tabs: **lifting**, **cardio**, **macros**, **progress**. Login is username + password.
 
-- **Next.js 14** (App Router) on Vercel
-- **Supabase** for auth, Postgres, RLS
-- **OpenAI** GPT-4o vision for meal parsing
-- **ZXing** for in-browser barcode reading
+## The model
 
-## Architecture at a glance
+Everything derives from one equation, computed on read (never stored):
 
 ```
-Client camera ──► ZXing decode (browser) ──► barcode match? ──┐
-                                                              │ no
-                                                              ▼
-                                              UI shows mismatch / timeout
-                                                              │ yes (matched)
-                                                              ▼
-Photo capture ──► resize to 1024px ──► /api/parse-meal ──► OpenAI vision
-                                              │
-                                              ▼
-                            JSON schema response (items, totals, flags)
-                                              │
-                                              ▼
-                              User edits in confirm view ──► Supabase meals row
-                                              │
-                                              ▼
-                              Photo discarded (never persisted server-side)
+daily net = intake − weights − cardio − BMR
 ```
 
-## Why barcode-gating before capture
+- **intake** = macro calories, `protein×4 + carbs×4 + fat×9`
+- **weights** = manually logged lifting calories burned
+- **cardio** = cardio calories burned
+- **BMR** = your basal rate, entered directly (effective-dated)
+- **net < 0** is a deficit (green), **net > 0** a surplus (red)
 
-The shutter button is only armed once the user's known barcode is detected in
-the live video stream. This:
+**Projected weight** = `starting weight + (cumulative net ÷ 3500 kcal/lb)`. Weight is projected from calories; there are no scale weigh-ins. Your **weight** and **BMR** are effective-dated: changing weight writes a new anchor (acts as a weigh-in) and the trend re-baselines from that date forward; changing BMR affects that date forward only. History is never rewritten.
 
-- Eliminates "wrong client" attribution errors before any API call
-- Confirms a known-size scale reference is present in frame, which the vision
-  model uses to estimate portion sizes
-- Filters out gaming attempts (random meal photos pulled from the web)
-- Costs nothing extra — the barcode is already on the membership tag
+## Setup (about 5 minutes)
 
-## Why no photo persistence
+### 1. Create a Supabase project
+At [supabase.com](https://supabase.com), create a new project.
 
-Photos move from browser → API route → OpenAI and back, never landing in
-Supabase Storage. Reasons:
+### 2. Run the schema
+Open **SQL Editor** in the Supabase dashboard, paste the contents of
+`supabase/migrations/0001_init.sql`, and run it. This creates all tables,
+row-level security (each user sees only their own data), and a trigger that
+creates a profile row on signup.
 
-- Privacy: meal photos can incidentally include people, locations, mail
-- Storage cost: a 50-client roster at 3 meals/day is ~4,500 photos/month
-- Liability surface: nothing to leak that we don't already have parsed
-- OpenAI API inputs are not used for training and have a short retention window
+### 3. Turn off email confirmation
+**Authentication → Providers → Email**, disable **Confirm email**.
+Login is by username, mapped internally to a non-deliverable address
+(`username@macros4.test`), so no confirmation email can be delivered. If your
+project rejects that domain at signup, change `AUTH_EMAIL_DOMAIN` in
+`lib/constants.ts` to any valid domain.
 
-If you later need photo persistence (e.g. for trainer review), add a private
-Supabase bucket with a 24-72h TTL and RLS policies scoped to the assigned
-trainer relationship. Don't enable this lightly.
-
-## Setup
-
-### 1. Supabase
-
-Create a new project at supabase.com, then in the SQL editor run
-`supabase/schema.sql`. This creates:
-
-- `profiles` — one row per user, with optional `trainer_id` linkage and
-  `barcode_number`
-- `preferences` — display mode and units
-- `meals` — every logged meal
-- Auto-creates a profile and preferences row on `auth.users` insert
-- Row Level Security policies so each user sees only their own data, and
-  trainers see their assigned clients (read-only)
-
-In **Auth → URL Configuration**, add your Vercel URL and `http://localhost:3000`
-as redirect URLs.
-
-### 2. OpenAI
-
-Create an API key at platform.openai.com. The route uses `gpt-4o` with
-structured outputs (JSON schema mode); make sure your key has access.
-
-### 3. Local environment
+### 4. Environment variables
+Copy the example and fill in your project values (Supabase → **Settings → API**):
 
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 ```
 
-Fill in:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY
+```
 
-- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from
-  Supabase → Project Settings → API
-- `OPENAI_API_KEY` from OpenAI dashboard
-- `TAG_WIDTH_MM` and `TAG_HEIGHT_MM` if your membership tags are not standard
-  CR80 (85×54mm)
-
-### 4. Run
-
+### 5. Run it
 ```bash
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000`. Sign in with magic link, then go to Settings
-and enter your barcode number before scanning.
-
-> **HTTPS for camera access**: `getUserMedia` only works on `localhost` or HTTPS.
-> For testing on a phone over your local network, use `next dev --experimental-https`
-> or tunnel with `ngrok` / `cloudflared`.
+Open http://localhost:3000, create an account, and complete onboarding
+(sex, height, starting weight, BMR).
 
 ## Deploy to Vercel
 
-```bash
-vercel
-```
+1. Push this repo to GitHub.
+2. Import it at [vercel.com/new](https://vercel.com/new).
+3. Add the same two environment variables (`NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`) in the Vercel project settings.
+4. Deploy.
 
-Set the same environment variables in the Vercel dashboard. Push to your
-GitHub repo for automatic deploys.
+## Stack
 
-## File map
+- **Next.js 14** (App Router) + **React 18** + **TypeScript**
+- **Tailwind CSS** (dark, minimal theme)
+- **Supabase** Postgres + Auth (`@supabase/ssr` for cookie sessions; RLS for isolation)
+- **Recharts** for the progress chart
 
-```
-app/
-  api/
-    auth/callback/route.ts     # Supabase magic-link return
-    parse-meal/route.ts        # OpenAI vision call (the one paid endpoint)
-  confirm/                     # Post-capture review + edit + log
-  login/                       # Magic-link auth
-  manual/                      # Nutrition-label-shaped manual entry
-  scan/                        # Barcode-gated camera
-  settings/                    # Barcode, display mode, units, sign out
-  globals.css                  # Utilitarian visual system
-  layout.tsx                   # Root shell
-  page.tsx                     # Redirect to /scan or /login
-components/
-  CameraGate.tsx               # ZXing-driven barcode-gated capture
-  TabBar.tsx                   # Bottom 3-tab navigation
-lib/
-  image.ts                     # Browser resize + frame capture
-  prompt.ts                    # System prompt + JSON schema
-  supabase-browser.ts          # Browser Supabase client
-  supabase-server.ts           # Server Supabase client (cookie-based)
-  types.ts                     # Shared types matching DB and API contract
-supabase/
-  schema.sql                   # Tables + RLS + auto-profile trigger
-```
+## Notes / roadmap
 
-## Customizing the parse prompt
-
-Edit `lib/prompt.ts`. The system prompt and the JSON schema travel together —
-update both if you add fields. The schema is enforced via OpenAI structured
-outputs (`response_format: json_schema, strict: true`), so a malformed
-response is impossible by the time it reaches your code.
-
-## Known things to decide later
-
-- **Trainer review.** The DB and RLS already support trainer reads of client
-  meals. There's no UI for it yet — that's a separate workflow once the
-  client-facing POC is validated.
-- **Barcode scan format.** ZXing auto-detects all common 1D and 2D formats.
-  Once you confirm the gym's tag format (Code 128, Code 39, EAN-13, QR, etc.),
-  pin it via the `hints` map for faster scans.
-- **Tag wear escape hatch.** Settings already lets users type their barcode
-  manually. Decide whether a typed-in number is treated with the same trust
-  as a scanned one (currently yes).
-- **Permission denied flow.** First-run camera denial currently shows a
-  banner only. Add a deeper recovery flow with browser-specific instructions
-  before going wide.
-- **Daily/weekly summary view.** Not implemented intentionally — see the
-  behavioral notes in the design memo about why a "remaining macros" widget
-  on the home screen is a design liability for compliance.
+- **Lifting** is log-only in v1. Exercises are stored with `muscle_group / sets /
+  reps` in clean relational rows, so a muscle-balance view can be built later
+  purely from the data — no schema change needed.
+- Height and sex are collected at onboarding and stored for future use; the v1
+  net uses your directly-entered BMR, not a computed one.
+- v1 is imperial (lb). A metric toggle is a natural next addition.
+- This is v1 and hasn't been run against a live Supabase instance yet — run it
+  locally first (step 5) to confirm before deploying.
