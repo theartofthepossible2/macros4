@@ -12,7 +12,7 @@ const TABS = [
 export default function BottomNav() {
   const path = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line/60 bg-bg/90 backdrop-blur">
+    <nav className="shrink-0 border-t border-line/60 bg-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-md items-stretch justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {TABS.map((t) => {
           const active = path.startsWith(t.href);

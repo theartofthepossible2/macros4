@@ -13,6 +13,13 @@ body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* App shell: fixed-height viewport so the bottom nav never moves while
+   scrolling (iOS Safari's collapsing toolbar makes position:fixed drift). */
+.app-shell {
+  height: 100vh; /* fallback */
+  height: 100dvh;
+}
+
 /* Visible keyboard focus (quality floor) */
 :focus-visible { outline: 2px solid #2f9bff; outline-offset: 2px; }
 
