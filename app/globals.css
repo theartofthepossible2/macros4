@@ -14,10 +14,12 @@ body {
 }
 
 /* App shell: fixed-height viewport so the bottom nav never moves while
-   scrolling (iOS Safari's collapsing toolbar makes position:fixed drift). */
+   scrolling (iOS Safari's collapsing toolbar makes position:fixed drift).
+   svh (not dvh): the body never scrolls, so the small viewport is always
+   correct, and it doesn't re-animate when iOS toolbar overlays come and go. */
 .app-shell {
   height: 100vh; /* fallback */
-  height: 100dvh;
+  height: 100svh;
 }
 
 /* Visible keyboard focus (quality floor) */
