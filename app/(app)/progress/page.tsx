@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useUser } from "@/components/UserProvider";
-import { BMR_HELP_URL, KCAL_PER_LB } from "@/lib/constants";
+import { KCAL_PER_LB } from "@/lib/constants";
 import {
-  buildDailySeries, buildProjectedWeight, movingAverage, effectiveOn, earliestDate,
+  buildDailySeries, buildProjectedWeight, movingAverage, earliestDate,
   type DayRow,
 } from "@/lib/calc";
 import { todayISO, addDays, prettyDate, signed } from "@/lib/format";
@@ -13,14 +12,13 @@ import type {
 } from "@/lib/types";
 import { ProgressChart, type ChartPoint } from "@/components/ProgressChart";
 import {
-  Card, ScreenTitle, Button, NumberField, Segmented, DateField, EmptyState, Divider,
+  Card, ScreenTitle, NumberField, Segmented, DateField, EmptyState,
 } from "@/components/ui";
 
 type Metric = "net" | "weight";
 type RangeKey = "14" | "30" | "90" | "all" | "custom";
 
 export default function ProgressPage() {
-  const { userId } = useUser();
   const supabase = useMemo(() => createClient(), []);
 
   const [bmrHistory, setBmrHistory] = useState<BmrEntry[]>([]);
@@ -37,11 +35,6 @@ export default function ProgressPage() {
   const [customStart, setCustomStart] = useState(addDays(todayISO(), -30));
   const [customEnd, setCustomEnd] = useState(todayISO());
 
-  // inputs (weight + bmr editing)
-  const [weightInput, setWeightInput] = useState(0);
-  const [bmrInput, setBmrInput] = useState(0);
-  const [savingInputs, setSavingInputs] = useState(false);
-
   async function load() {
     const [b, w, m, c, l] = await Promise.all([
       supabase.from("bmr_entries").select("*").order("effective_from", { ascending: true }),
@@ -57,9 +50,6 @@ export default function ProgressPage() {
     setMacros((m.data as MacroEntry[]) ?? []);
     setCardio((c.data as CardioEntry[]) ?? []);
     setLifting((l.data as LiftingCalorieEntry[]) ?? []);
-    const today = todayISO();
-    setWeightInput(effectiveOn(an, today)?.weight_lb ?? 0);
-    setBmrInput(effectiveOn(bh, today)?.bmr ?? 0);
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
@@ -120,55 +110,9 @@ export default function ProgressPage() {
 
   const smoothKey: "3" | "7" | "custom" = windowN === 3 ? "3" : windowN === 7 ? "7" : "custom";
 
-  async function saveInputs() {
-    setSavingInputs(true);
-    const curWeight = effectiveOn(anchors, today)?.weight_lb ?? null;
-    const curBmr = effectiveOn(bmrHistory, today)?.bmr ?? null;
-    if (weightInput > 0 && weightInput !== curWeight) {
-      await supabase.from("weight_anchors").upsert(
-        { user_id: userId, effective_from: today, weight_lb: weightInput },
-        { onConflict: "user_id,effective_from" },
-      );
-    }
-    if (bmrInput > 0 && bmrInput !== curBmr) {
-      await supabase.from("bmr_entries").upsert(
-        { user_id: userId, effective_from: today, bmr: bmrInput },
-        { onConflict: "user_id,effective_from" },
-      );
-    }
-    await load();
-    setSavingInputs(false);
-  }
-
   return (
     <div className="space-y-5">
       <ScreenTitle>progress</ScreenTitle>
-
-      {/* Inputs */}
-      <Card className="p-4 space-y-1">
-        <span className="text-sm text-muted">inputs</span>
-        <Divider />
-        <div className="flex items-center justify-between py-2">
-          <span className="text-base">current weight</span>
-          <NumberField value={weightInput} onChange={setWeightInput} min={40} max={1200} suffix="lb" />
-        </div>
-        <Divider />
-        <div className="flex items-center justify-between py-2">
-          <span className="text-base">bmr</span>
-          <NumberField value={bmrInput} onChange={setBmrInput} min={500} max={6000} suffix="kcal/day" />
-        </div>
-        <div className="flex items-center justify-between gap-3 pt-3">
-          <a href={BMR_HELP_URL} target="_blank" rel="noopener noreferrer" className="text-sm text-accent">
-            What&apos;s my BMR? →
-          </a>
-          <Button onClick={saveInputs} disabled={savingInputs} variant="ghost">
-            {savingInputs ? "Saving…" : "Save"}
-          </Button>
-        </div>
-        <p className="pt-1 text-xs text-muted">
-          Changing weight logs a weigh-in for today; the trend re-baselines from here. Past days are unchanged.
-        </p>
-      </Card>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2">

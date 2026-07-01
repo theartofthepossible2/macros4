@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/(auth)/actions";
+import { BodyInputs } from "./BodyInputs";
 
 export default async function SettingsPage() {
   const supabase = createClient();
@@ -24,9 +25,7 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <p className="px-1 text-xs text-muted">
-        Weight and BMR are edited on the progress tab, where changes are dated so your history stays intact.
-      </p>
+      <BodyInputs />
 
       <form action={logout}>
         <button
