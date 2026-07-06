@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/(auth)/actions";
 import { BodyInputs } from "./BodyInputs";
+import { DataControls } from "./DataControls";
 
 export default async function SettingsPage() {
   const supabase = createClient();
@@ -26,6 +27,8 @@ export default async function SettingsPage() {
       </div>
 
       <BodyInputs />
+
+      <DataControls />
 
       <form action={logout}>
         <button
