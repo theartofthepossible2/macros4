@@ -1,3 +1,11 @@
+import { ScreenTitle } from "@/components/ui";
+import { PulseTracker } from "./PulseTracker";
+
 export default function PulsePage() {
-  return <h1 className="text-3xl font-bold tracking-tight px-1">heart rate</h1>;
+  return (
+    <div className="space-y-5">
+      <ScreenTitle>heart rate</ScreenTitle>
+      <PulseTracker />
+    </div>
+  );
 }
